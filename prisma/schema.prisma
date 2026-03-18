@@ -50,5 +50,7 @@ model Settings {
   downloadPath  String   @default("./downloads")
   defaultFormat String   @default("zip")
   theme         String   @default("light")
+  minImageWidth Int      @default(0)
+  minImageHeight Int     @default(0)
   updatedAt     DateTime @updatedAt
 }

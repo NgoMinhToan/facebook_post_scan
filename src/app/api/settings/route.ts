@@ -14,6 +14,8 @@ export async function GET() {
           downloadPath: './downloads',
           defaultFormat: 'zip',
           theme: 'light',
+          minImageWidth: 0,
+          minImageHeight: 0,
         },
       });
     }
@@ -33,20 +35,24 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { downloadPath, defaultFormat, theme } = await request.json();
+    const { downloadPath, defaultFormat, theme, minImageWidth, minImageHeight } = await request.json();
 
     const settings = await prisma.settings.upsert({
       where: { id: 'default' },
       update: {
-        ...(downloadPath && { downloadPath }),
-        ...(defaultFormat && { defaultFormat }),
-        ...(theme && { theme }),
+        ...(downloadPath !== undefined && { downloadPath }),
+        ...(defaultFormat !== undefined && { defaultFormat }),
+        ...(theme !== undefined && { theme }),
+        ...(minImageWidth !== undefined && { minImageWidth: parseInt(minImageWidth) || 0 }),
+        ...(minImageHeight !== undefined && { minImageHeight: parseInt(minImageHeight) || 0 }),
       },
       create: {
         id: 'default',
         downloadPath: downloadPath || './downloads',
         defaultFormat: defaultFormat || 'zip',
         theme: theme || 'light',
+        minImageWidth: minImageWidth ? parseInt(minImageWidth) : 0,
+        minImageHeight: minImageHeight ? parseInt(minImageHeight) : 0,
       },
     });
 

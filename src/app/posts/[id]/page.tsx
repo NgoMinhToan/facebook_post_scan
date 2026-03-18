@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { Loader2, Download, ArrowLeft, Image, Trash2, FolderOpen, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,9 +25,10 @@ interface ViewData {
   metadata?: string;
 }
 
-export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
+export default function PostDetailPage() {
+  const params = useParams();
   const router = useRouter();
+  const postId = params.id as string;
   const [view, setView] = useState<ViewData | null>(null);
   const [images, setImages] = useState<ImageItem[]>([]);
   const [selectedImages, setSelectedImages] = useState<Set<number>>(new Set());
@@ -39,11 +40,11 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
   useEffect(() => {
     fetchViewData();
-  }, [resolvedParams.id]);
+  }, [postId]);
 
   const fetchViewData = async () => {
     try {
-      const res = await fetch(`/api/images/download?viewId=${resolvedParams.id}`);
+      const res = await fetch(`/api/images/download?viewId=${postId}`);
       const data = await res.json();
       
       if (data.success) {
@@ -96,7 +97,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          viewId: resolvedParams.id,
+          viewId: postId,
           format: fileFormat,
           fileName: downloadName,
           imageUrls: selectedUrls,

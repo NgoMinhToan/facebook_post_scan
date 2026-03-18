@@ -44,12 +44,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const normalizedCookies = cookies.map((cookie: any) => ({
+      name: cookie.name,
+      value: cookie.value,
+      domain: cookie.domain || '.facebook.com',
+      path: cookie.path || '/',
+      expires: cookie.expires || -1,
+      httpOnly: cookie.httpOnly || false,
+      secure: cookie.secure !== false,
+      sameSite: cookie.sameSite === 'Strict' || cookie.sameSite === 'Lax' || cookie.sameSite === 'None' 
+        ? cookie.sameSite 
+        : 'Lax',
+    }));
+
     const browser = await chromium.launch({ headless: true });
     const context = await browser.newContext();
-    await context.addCookies(cookies);
+    await context.addCookies(normalizedCookies);
 
     const page = await context.newPage();
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+    
+    try {
+      await page.goto(url, { waitUntil: 'load', timeout: 30000 });
+    } catch {
+      try {
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      } catch (e) {
+        console.log('Navigation timeout, trying to continue anyway');
+      }
+    }
 
     await page.waitForTimeout(2000);
 

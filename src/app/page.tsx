@@ -391,6 +391,8 @@ export default function Dashboard() {
 function SettingsCard() {
   const [downloadPath, setDownloadPath] = useState('./downloads');
   const [defaultFormat, setDefaultFormat] = useState('zip');
+  const [minWidth, setMinWidth] = useState('0');
+  const [minHeight, setMinHeight] = useState('0');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -400,6 +402,8 @@ function SettingsCard() {
         if (data.settings) {
           setDownloadPath(data.settings.downloadPath);
           setDefaultFormat(data.settings.defaultFormat);
+          setMinWidth(String(data.settings.minImageWidth || 0));
+          setMinHeight(String(data.settings.minImageHeight || 0));
         }
       });
   }, []);
@@ -410,7 +414,12 @@ function SettingsCard() {
       await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ downloadPath, defaultFormat }),
+        body: JSON.stringify({ 
+          downloadPath, 
+          defaultFormat,
+          minImageWidth: parseInt(minWidth) || 0,
+          minImageHeight: parseInt(minHeight) || 0,
+        }),
       });
       alert('Đã lưu cài đặt!');
     } catch {
@@ -446,6 +455,66 @@ function SettingsCard() {
             <option value="zip">ZIP (.zip)</option>
             <option value="cbz">CBZ (.cbz)</option>
           </select>
+        </div>
+        <div className="border-t pt-4 mt-4">
+          <h4 className="font-medium mb-3">Lọc chất lượng ảnh</h4>
+          <p className="text-xs text-muted-foreground mb-3">
+            Chỉ giữ lại ảnh có độ phân giải tối thiểu. Đặt 0 để không lọc.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="minWidth">Chiều rộng tối thiểu (px)</Label>
+              <Input
+                id="minWidth"
+                type="number"
+                min="0"
+                value={minWidth}
+                onChange={(e) => setMinWidth(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="minHeight">Chiều cao tối thiểu (px)</Label>
+              <Input
+                id="minHeight"
+                type="number"
+                min="0"
+                value={minHeight}
+                onChange={(e) => setMinHeight(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => { setMinWidth('0'); setMinHeight('0'); }}
+            >
+              Không lọc (0x0)
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => { setMinWidth('300'); setMinHeight('300'); }}
+            >
+              Thấp (300x300)
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => { setMinWidth('600'); setMinHeight('400'); }}
+            >
+              Trung bình (600x400)
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => { setMinWidth('1200'); setMinHeight('800'); }}
+            >
+              Cao (1200x800)
+            </Button>
+          </div>
         </div>
         <Button onClick={handleSave} disabled={isSaving} className="w-full">
           {isSaving ? (
