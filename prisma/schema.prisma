@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Session {
+  id        String    @id @default(cuid())
+  fbToken   String?
+  fbCookies String?
+  userId    String?
+  userName  String?
+  userAvatar String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  expiresAt DateTime?
+}
+
+model ViewHistory {
+  id          String   @id @default(cuid())
+  url         String
+  type        String
+  title       String?
+  metadata    String?
+  imagesCount Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model DownloadHistory {
+  id            String   @id @default(cuid())
+  viewHistoryId String?
+  postUrl       String
+  postTitle     String?
+  folderPath    String
+  fileName      String
+  fileFormat    String
+  imagesCount   Int
+  fileSize      Int?
+  status        String
+  folderExists  Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Settings {
+  id            String   @id @default("default")
+  downloadPath  String   @default("./downloads")
+  defaultFormat String   @default("zip")
+  theme         String   @default("light")
+  updatedAt     DateTime @updatedAt
+}
