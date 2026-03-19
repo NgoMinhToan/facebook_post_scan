@@ -72,12 +72,18 @@
 3. F12 → Application → Cookies → facebook.com
 4. Copy cookies: c_user, xs, fr
 5. Dán vào ô import cookies
+6. Nhấn "Import Cookies"
 
-### Issue: Cookie Login Not Working
-**Lỗi:** Sau khi import cookies vẫn bị chuyển về trang login
-**Nguyên nhân:** API `/api/auth/status` chỉ kiểm tra `fbToken`, không kiểm tra `fbCookies`
-**Giải pháp:**
-- Sửa API status để kiểm tra cả `fbToken` và `fbCookies`
+**Đã loại bỏ:** Đăng nhập bằng mật khẩu (không ổn định, hay bị Facebook chặn)
+
+### Feature: Image Quality Filter
+**Mục đích:** Lọc ảnh theo độ phân giải tối thiểu
+**Tùy chọn:**
+- Không lọc (0x0)
+- Thấp (300x300)
+- Trung bình (600x400)
+- Cao (1200x800)
+- Tùy chỉnh thủ công
 
 ---
 
