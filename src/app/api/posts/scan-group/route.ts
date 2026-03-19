@@ -27,7 +27,7 @@ async function getSessionCookies() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { url, maxPosts = 10 } = await request.json();
+    const { url } = await request.json();
 
     if (!url || !url.includes('facebook.com')) {
       return NextResponse.json(
@@ -35,6 +35,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const settings = await prisma.settings.findUnique({ where: { id: 'default' } });
+    const maxPosts = settings?.maxPostsInGroup || 10;
 
     const cookies = await getSessionCookies();
     if (!cookies) {
@@ -58,7 +61,7 @@ export async function POST(request: NextRequest) {
     }));
 
     const browser = await chromium.launch({ 
-      headless: false,
+      headless: true,
       args: [
         '--disable-blink-features=AutomationControlled',
         '--disable-dev-shm-usage',
@@ -68,7 +71,7 @@ export async function POST(request: NextRequest) {
     });
     
     const context = await browser.newContext({
-      viewport: { width: 1920, height: 1080 },
+      viewport: { width: 1280, height: 800 },
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
     });
     await context.addCookies(normalizedCookies);
@@ -116,8 +119,18 @@ export async function POST(request: NextRequest) {
             const href = await link.getAttribute('href');
             if (href && href.includes('/posts/')) {
               const cleanUrl = href.split('?')[0];
-              if (!postUrl || cleanUrl.length < postUrl.length) {
-                postUrl = 'https://www.facebook.com' + cleanUrl;
+              let finalUrl = cleanUrl;
+
+              if (cleanUrl.startsWith('http')) {
+                finalUrl = cleanUrl;
+              } else if (cleanUrl.startsWith('//')) {
+                finalUrl = 'https:' + cleanUrl;
+              } else {
+                finalUrl = 'https://www.facebook.com' + cleanUrl;
+              }
+
+              if (!postUrl || finalUrl.length < postUrl.length) {
+                postUrl = finalUrl;
               }
             }
           }

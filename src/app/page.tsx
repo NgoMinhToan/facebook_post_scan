@@ -134,7 +134,7 @@ export default function Dashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        router.push('/posts');
+        router.push(`/posts/${data.viewId}`);
       } else {
         alert(data.error || 'Failed to scan group');
       }
@@ -393,6 +393,8 @@ function SettingsCard() {
   const [defaultFormat, setDefaultFormat] = useState('zip');
   const [minWidth, setMinWidth] = useState('0');
   const [minHeight, setMinHeight] = useState('0');
+  const [maxPostsInGroup, setMaxPostsInGroup] = useState('10');
+  const [maxImagesInPost, setMaxImagesInPost] = useState('50');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -404,6 +406,8 @@ function SettingsCard() {
           setDefaultFormat(data.settings.defaultFormat);
           setMinWidth(String(data.settings.minImageWidth || 0));
           setMinHeight(String(data.settings.minImageHeight || 0));
+          setMaxPostsInGroup(String(data.settings.maxPostsInGroup || 10));
+          setMaxImagesInPost(String(data.settings.maxImagesInPost || 50));
         }
       });
   }, []);
@@ -419,6 +423,8 @@ function SettingsCard() {
           defaultFormat,
           minImageWidth: parseInt(minWidth) || 0,
           minImageHeight: parseInt(minHeight) || 0,
+          maxPostsInGroup: parseInt(maxPostsInGroup) || 10,
+          maxImagesInPost: parseInt(maxImagesInPost) || 50,
         }),
       });
       alert('Đã lưu cài đặt!');
@@ -513,6 +519,58 @@ function SettingsCard() {
               onClick={() => { setMinWidth('1200'); setMinHeight('800'); }}
             >
               Cao (1200x800)
+            </Button>
+          </div>
+        </div>
+        <div className="border-t pt-4 mt-4">
+          <h4 className="font-medium mb-3">Giới hạn quét</h4>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="maxPostsInGroup">Số bài viết (Group/Page)</Label>
+              <Input
+                id="maxPostsInGroup"
+                type="number"
+                min="1"
+                max="100"
+                value={maxPostsInGroup}
+                onChange={(e) => setMaxPostsInGroup(e.target.value)}
+                placeholder="10"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="maxImagesInPost">Số ảnh (Post)</Label>
+              <Input
+                id="maxImagesInPost"
+                type="number"
+                min="1"
+                max="200"
+                value={maxImagesInPost}
+                onChange={(e) => setMaxImagesInPost(e.target.value)}
+                placeholder="50"
+              />
+            </div>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => { setMaxPostsInGroup('5'); setMaxImagesInPost('20'); }}
+            >
+              Ít (5 bài, 20 ảnh)
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => { setMaxPostsInGroup('10'); setMaxImagesInPost('50'); }}
+            >
+              Trung bình (10 bài, 50 ảnh)
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => { setMaxPostsInGroup('20'); setMaxImagesInPost('100'); }}
+            >
+              Nhiều (20 bài, 100 ảnh)
             </Button>
           </div>
         </div>

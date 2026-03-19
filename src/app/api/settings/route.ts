@@ -16,6 +16,8 @@ export async function GET() {
           theme: 'light',
           minImageWidth: 0,
           minImageHeight: 0,
+          maxPostsInGroup: 10,
+          maxImagesInPost: 50,
         },
       });
     }
@@ -35,7 +37,7 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { downloadPath, defaultFormat, theme, minImageWidth, minImageHeight } = await request.json();
+    const { downloadPath, defaultFormat, theme, minImageWidth, minImageHeight, maxPostsInGroup, maxImagesInPost } = await request.json();
 
     const settings = await prisma.settings.upsert({
       where: { id: 'default' },
@@ -45,6 +47,8 @@ export async function PUT(request: NextRequest) {
         ...(theme !== undefined && { theme }),
         ...(minImageWidth !== undefined && { minImageWidth: parseInt(minImageWidth) || 0 }),
         ...(minImageHeight !== undefined && { minImageHeight: parseInt(minImageHeight) || 0 }),
+        ...(maxPostsInGroup !== undefined && { maxPostsInGroup: parseInt(maxPostsInGroup) || 10 }),
+        ...(maxImagesInPost !== undefined && { maxImagesInPost: parseInt(maxImagesInPost) || 50 }),
       },
       create: {
         id: 'default',
@@ -53,6 +57,8 @@ export async function PUT(request: NextRequest) {
         theme: theme || 'light',
         minImageWidth: minImageWidth ? parseInt(minImageWidth) : 0,
         minImageHeight: minImageHeight ? parseInt(minImageHeight) : 0,
+        maxPostsInGroup: maxPostsInGroup ? parseInt(maxPostsInGroup) : 10,
+        maxImagesInPost: maxImagesInPost ? parseInt(maxImagesInPost) : 50,
       },
     });
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Loader2, Download, ArrowLeft, Image, Trash2, FolderOpen, Check } from 'lucide-react';
+import { Loader2, Download, ArrowLeft, Image, Trash2, FolderOpen, Check, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,14 @@ interface ImageItem {
   url: string;
   alt?: string;
   selected?: boolean;
+}
+
+interface PostItem {
+  id: string;
+  url: string;
+  title: string;
+  imagesCount: number;
+  date?: string;
 }
 
 interface ViewData {
@@ -31,6 +39,7 @@ export default function PostDetailPage() {
   const postId = params.id as string;
   const [view, setView] = useState<ViewData | null>(null);
   const [images, setImages] = useState<ImageItem[]>([]);
+  const [posts, setPosts] = useState<PostItem[]>([]);
   const [selectedImages, setSelectedImages] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -49,6 +58,18 @@ export default function PostDetailPage() {
       
       if (data.success) {
         setView(data.view);
+        
+        if (data.view.metadata) {
+          try {
+            const metadata = JSON.parse(data.view.metadata);
+            if (metadata.posts) {
+              setPosts(metadata.posts);
+            }
+          } catch (e) {
+            console.error('Failed to parse metadata:', e);
+          }
+        }
+        
         const imageList = data.images || [];
         setImages(imageList);
         setSelectedImages(new Set(imageList.map((_: any, i: number) => i)));
@@ -160,6 +181,56 @@ export default function PostDetailPage() {
       </nav>
 
       <div className="mx-auto max-w-7xl px-4 py-8">
+        {posts.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FolderOpen className="h-5 w-5" />
+                Danh sách bài viết ({posts.length})
+              </CardTitle>
+              <CardDescription>
+                Nhấn "Quét" để mở bài viết trong tab mới
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {posts.map((post, index) => (
+                  <div
+                    key={post.id}
+                    className="flex items-center justify-between rounded-lg border p-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          #{index + 1}
+                        </span>
+                        <span className="font-medium truncate">
+                          {post.title || post.url}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate mt-1">
+                        {post.url}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {post.imagesCount} ảnh
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="ml-2"
+                      onClick={() => window.open(`/posts/scan?url=${encodeURIComponent(post.url)}`, '_blank')}
+                    >
+                      <ExternalLink className="mr-1 h-4 w-4" />
+                      Quét
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <Card>

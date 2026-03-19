@@ -1,9 +1,10 @@
+import { prisma } from '@/lib/prisma';
 import { Page } from 'playwright';
 import { FacebookImage } from './types';
 
 export async function findAndClickFirstImage(page: Page): Promise<boolean> {
   console.log('Finding image using Tab navigation...');
-  
+
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForLoadState('load');
 
@@ -15,10 +16,10 @@ export async function findAndClickFirstImage(page: Page): Promise<boolean> {
     const focusedElement = await page.evaluate(() => {
       const el = document.activeElement;
       if (!el) return null;
-      
+
       const tagName = el.tagName.toLowerCase();
       const href = (el as HTMLAnchorElement).href || '';
-      
+
       return {
         tagName,
         href,
@@ -35,7 +36,7 @@ export async function findAndClickFirstImage(page: Page): Promise<boolean> {
     if (!focusedElement) continue;
 
     const shortHref = focusedElement.href?.substring(0, 70) || 'no href';
-    
+
     if (focusedElement.isPhotoLink) {
       console.log(`✅ Found photo link! Clicking directly...`);
       await page.evaluate(() => {
@@ -50,15 +51,16 @@ export async function findAndClickFirstImage(page: Page): Promise<boolean> {
       continue;
     }
   }
-  
+
   console.log('Tab navigation complete, trying direct selector...');
   return false;
 }
 
 export async function extractImagesFromFullView(page: Page, seenUrls: Set<string>): Promise<FacebookImage[]> {
+  const settings = await prisma.settings.findUnique({ where: { id: 'default' } });
+  const maxImages = settings?.maxImagesInPost || 50;
   const images: FacebookImage[] = [];
   let imgCount = 0;
-  const maxImages = 100;
 
   console.log('Waiting for dialog to fully load...');
   await page.waitForLoadState('load');
@@ -71,7 +73,7 @@ export async function extractImagesFromFullView(page: Page, seenUrls: Set<string
         'div[role="dialog"] svg image[xlink\\:href*="scontent"]',
         '[data-pagelet*="MediaViewer"] svg image[href*="scontent"]',
       ];
-      
+
       for (const selector of svgImageSelectors) {
         const svgImages = await page.$$(selector);
         for (const svgImg of svgImages) {
@@ -86,12 +88,12 @@ export async function extractImagesFromFullView(page: Page, seenUrls: Set<string
     } catch (e) {
       console.log(`   SVG search error: ${e}`);
     }
-    
+
     try {
       const allImages = await page.$$('div[role="dialog"] img[src*="scontent"], div[role="dialog"] img[src*="fbcdn"]');
       let largestImage = null;
       let largestSize = 0;
-      
+
       for (const img of allImages) {
         const src = await img.getAttribute('src');
         const isInMain = await img.evaluate((node) => !!node.closest('div[role="main"]'));
@@ -102,14 +104,14 @@ export async function extractImagesFromFullView(page: Page, seenUrls: Set<string
           const urlLower = src.toLowerCase();
           const isNotThumbnail = !src.includes('_nc_') || src.includes('scontent');
           const isLikelyHD = src.includes('scontent.fsgn') || src.includes('scontent.fsbk');
-          
+
           if (isNotThumbnail && (isLikelyHD || !largestImage)) {
             largestImage = src;
             largestSize++;
           }
         }
       }
-      
+
       if (largestImage) {
         console.log(`   Found likely HD image: ${largestImage.substring(0, 60)}...`);
         return largestImage;
@@ -117,7 +119,7 @@ export async function extractImagesFromFullView(page: Page, seenUrls: Set<string
     } catch (e) {
       console.log(`   Image search error: ${e}`);
     }
-    
+
     try {
       const anyImage = await page.$('div[role="dialog"] img[src*="scontent"]');
       if (anyImage) {
@@ -127,74 +129,74 @@ export async function extractImagesFromFullView(page: Page, seenUrls: Set<string
           return src;
         }
       }
-    } catch {}
-    
+    } catch { }
+
     return null;
   };
 
   const waitForNewImage = async (previousUrl: string): Promise<string | null> => {
     console.log(`   Waiting for new image to load...`);
-    
+
     for (let wait = 0; wait < 15; wait++) {
       await page.waitForTimeout(100);
       await page.waitForLoadState('load');
-      
+
       const currentUrl = await getDialogImageUrl();
-      
+
       if (!currentUrl) {
         console.log(`   Still no image found...`);
         continue;
       }
-      
+
       const isSame = currentUrl === previousUrl || currentUrl.includes(previousUrl.split('?')[0].split('/').pop() || '');
       const isNewUrl = !isSame && currentUrl !== previousUrl;
-      
+
       if (isNewUrl) {
         console.log(`   ✅ New image loaded after ${wait + 1}s`);
         console.log(`   New URL: ${currentUrl.substring(0, 60)}...`);
         return currentUrl;
       }
-      
+
       if (wait % 3 === 0) {
         console.log(`   Still loading... ${wait + 1}s`);
       }
     }
-    
+
     return null;
   };
 
   console.log('Starting to extract images from dialog...');
-  
+
   while (imgCount < maxImages) {
     console.log(`\nChecking image ${imgCount + 1}...`);
-    
+
     const currentUrl = await getDialogImageUrl();
 
     if (currentUrl) {
       const cleanUrl = currentUrl.split('?')[0];
       console.log(`   Current URL: ${cleanUrl}`);
-      
+
       if (!seenUrls.has(cleanUrl)) {
         seenUrls.add(cleanUrl);
         images.push({ url: currentUrl, alt: `Image ${imgCount + 1}` });
         console.log(`✅ Collected image ${imgCount + 1}: ${cleanUrl.substring(0, 60)}...`);
         imgCount++;
-        
+
         if (imgCount >= maxImages) {
           console.log(`Reached max images limit (${maxImages})`);
           break;
         }
-        
+
         console.log(`   Pressing ArrowRight...`);
         await page.keyboard.press('ArrowRight');
-        
+
         const newUrl = await waitForNewImage(cleanUrl);
-        
+
         if (!newUrl) {
           console.log(`🔄 No new image loaded after waiting, stopping...`);
           break;
         }
-        
+
         const newCleanUrl = newUrl.split('?')[0];
         if (seenUrls.has(newCleanUrl) || newUrl === currentUrl) {
           console.log(`🔄 Looped back to existing image (${seenUrls.size} total), stopping...`);

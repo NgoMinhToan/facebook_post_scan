@@ -46,11 +46,13 @@ model DownloadHistory {
 }
 
 model Settings {
-  id            String   @id @default("default")
-  downloadPath  String   @default("./downloads")
-  defaultFormat String   @default("zip")
-  theme         String   @default("light")
-  minImageWidth Int      @default(0)
-  minImageHeight Int     @default(0)
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default("default")
+  downloadPath    String   @default("./downloads")
+  defaultFormat   String   @default("zip")
+  theme           String   @default("light")
+  minImageWidth   Int      @default(0)
+  minImageHeight  Int      @default(0)
+  maxPostsInGroup Int      @default(10)
+  maxImagesInPost Int      @default(50)
+  updatedAt       DateTime @updatedAt
 }

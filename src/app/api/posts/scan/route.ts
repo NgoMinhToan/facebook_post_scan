@@ -25,19 +25,29 @@ async function getTitle(page: Page): Promise<string> {
   return title;
 }
 
-async function filterValidImageUrls(images: FacebookImage[]) {
+async function filterAndLimitImages(images: FacebookImage[]) {
   const settings = await prisma.settings.findUnique({ where: { id: 'default' } });
   const minWidth = settings?.minImageWidth || 0;
   const minHeight = settings?.minImageHeight || 0;
+  const maxImages = settings?.maxImagesInPost || 50;
 
+  let filtered = images;
   const originalCount = images.length;
+
   if (minWidth > 0 || minHeight > 0) {
-    images.splice(0, images.length, ...images.filter(img => {
+    filtered = filtered.filter(img => {
       if (!img.width || !img.height) return true;
       return img.width >= minWidth && img.height >= minHeight;
-    }));
-    console.log(`Filtered ${originalCount - images.length} low-quality images`);
+    });
+    console.log(`Filtered ${originalCount - filtered.length} low-quality images`);
   }
+
+  if (filtered.length > maxImages) {
+    console.log(`Limiting from ${filtered.length} to ${maxImages} images`);
+    filtered = filtered.slice(0, maxImages);
+  }
+
+  images.splice(0, images.length, ...filtered);
 }
 
 export async function POST(request: NextRequest) {
@@ -98,7 +108,7 @@ export async function POST(request: NextRequest) {
     await page.keyboard.press('Escape').catch(() => { });
     await page.waitForTimeout(500);
 
-    await filterValidImageUrls(images);
+    await filterAndLimitImages(images);
 
     await browser.close();
 
