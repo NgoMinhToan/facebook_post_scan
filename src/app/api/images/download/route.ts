@@ -154,7 +154,6 @@ export async function POST(request: NextRequest) {
     });
 
     const zip = new JSZip();
-    const imgFolder = zip.folder('images');
 
     let downloadedCount = 0;
 
@@ -165,7 +164,7 @@ export async function POST(request: NextRequest) {
 
       const buffer = await downloadImage(image.url);
       if (buffer) {
-        imgFolder?.file(fileNameInZip, buffer);
+        zip.file(fileNameInZip, buffer);
         downloadedCount++;
       }
     }
