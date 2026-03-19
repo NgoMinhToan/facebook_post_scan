@@ -57,23 +57,39 @@ export async function POST(request: NextRequest) {
         : 'Lax',
     }));
 
-    const browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext();
+    const browser = await chromium.launch({ 
+      headless: false,
+      args: [
+        '--disable-blink-features=AutomationControlled',
+        '--disable-dev-shm-usage',
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+      ],
+    });
+    
+    const context = await browser.newContext({
+      viewport: { width: 1920, height: 1080 },
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    });
     await context.addCookies(normalizedCookies);
 
     const page = await context.newPage();
     
+    console.log('Scanning group/page:', url);
+    
     try {
-      await page.goto(url, { waitUntil: 'load', timeout: 30000 });
-    } catch {
-      try {
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
-      } catch (e) {
-        console.log('Navigation timeout, trying to continue anyway');
-      }
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    } catch (e) {
+      console.log('Navigation warning:', e);
     }
 
     await page.waitForTimeout(2000);
+    
+    console.log('Scrolling to load posts...');
+    for (let i = 0; i < 5; i++) {
+      await page.evaluate(() => window.scrollBy(0, 800));
+      await page.waitForTimeout(1000);
+    }
 
     let pageTitle = '';
     const titleElement = await page.$('h1 span');

@@ -1,7 +1,7 @@
 # Facebook Post Scanner - Tiến Độ Dự Án
 
-**Ngày cập nhật:** 2026-03-18  
-**Trạng thái:** ✅ ĐANG TRIỂN KHAI + FIXING ISSUES
+**Ngày cập nhật:** 2026-03-19  
+**Trạng thái:** ✅ HOÀN THÀNH CƠ BẢN
 
 ---
 
@@ -12,15 +12,18 @@
 - [x] Setup Prisma với SQLite
 - [x] Setup TailwindCSS + shadcn/ui
 - [x] Tạo database schema
-- [x] Build trang login Facebook
-- [x] Implement Facebook login với Playwright
+- [x] Import Cookies login
 - [x] Build Dashboard layout
-- [x] Install dependencies & test build
 
 ### ✅ Phase 2: Post Scanner  
 - [x] API: Scan single post
-- [x] API: Extract images từ post
-- [x] Frontend: Post input component
+- [x] Tab navigation để tìm link ảnh (/photo/?fbid=)
+- [x] Skip non-photo links (media/set, groups, profile, pages)
+- [x] Open Facebook dialog
+- [x] Extract images từ SVG elements (HD images)
+- [x] ArrowRight navigation để duyệt ảnh tiếp
+- [x] Wait for image to load (tối đa 15 giây)
+- [x] Loop detection (dừng khi quay lại ảnh đầu)
 - [x] Frontend: Image preview grid
 - [x] API: Scan group/page posts
 
@@ -42,48 +45,66 @@
 ### ✅ Phase 5: Settings & Polish
 - [x] Settings page
 - [x] Default path configuration
-- [x] **FIXED:** Facebook login selectors (Facebook thay đổi cấu trúc)
-- [x] Thử nhiều selectors khác nhau
-- [x] Hỗ trợ mbasic.facebook.com
-- [x] Xử lý 2FA/checkpoint
-- [ ] Error handling nâng cao (đang cải thiện)
-- [ ] Testing
+- [x] Image quality filter (min width/height)
+- [x] Error handling nâng cao
 
 ---
 
-## Issues Đã Fix
+## Playwright Image Extraction Logic (2026-03-19)
 
-### Issue: Facebook Login Timeout
-**Lỗi:** `page.waitForSelector: Timeout 10000ms exceeded - waiting for locator('#email')`
-**Nguyên nhân:** Facebook thay đổi cấu trúc trang login, có thể bị checkpoint/2FA
-**Giải pháp:**
-- Thêm nhiều selectors dự phòng cho email/password
-- Hỗ trợ mobile version (mbasic.facebook.com)
-- Cải thiện xử lý lỗi cho 2FA và checkpoint
-- Tăng timeout và retry logic
-- **THÊM: Tùy chọn đăng nhập bằng Cookies**
+### Luồng xử lý hoàn chỉnh:
 
-### New Feature: Import Cookies Login
-**Mục đích:** Cho phép đăng nhập bằng cách dán cookies từ trình duyệt đã đăng nhập
-**Lợi ích:** Tránh được 2FA và checkpoint khi auto-login thất bại
-**Cách sử dụng:**
-1. Mở Facebook.com trên trình duyệt thật (Chrome/Edge)
-2. Đăng nhập tài khoản
-3. F12 → Application → Cookies → facebook.com
-4. Copy cookies: c_user, xs, fr
-5. Dán vào ô import cookies
-6. Nhấn "Import Cookies"
+```
+1. Navigate đến URL bài viết
+2. Chờ 5 giây để load hoàn toàn
+3. Scroll 5 lần để load content
+4. Tab navigation (tối đa 100 lần)
+   ├── Tìm link có định dạng /photo/?fbid= → CLICK ✅
+   ├── Bỏ qua các link khác:
+   │   ├── /media/set/ ❌
+   │   ├── /groups/ ❌
+   │   ├── /profile/ ❌
+   │   ├── /pages/ ❌
+   │   └── /status/ ❌
+5. Chờ 4 giây cho dialog mở
+6. Extract ảnh từ SVG elements (URL HD)
+7. Nhấn ArrowRight → Chờ 15 giây cho ảnh mới load
+8. Lặp lại cho đến khi quay lại ảnh đầu
+9. Nhấn Escape đóng dialog
+```
 
-**Đã loại bỏ:** Đăng nhập bằng mật khẩu (không ổn định, hay bị Facebook chặn)
+### Image Extraction:
+- **Ưu tiên 1:** SVG `image[href*="scontent"]` - Chứa URL ảnh HD gốc
+- **Ưu tiên 2:** Image có kích thước lớn
+- **Fallback:** Bất kỳ img có scontent nào
 
-### Feature: Image Quality Filter
-**Mục đích:** Lọc ảnh theo độ phân giải tối thiểu
-**Tùy chọn:**
+---
+
+## Features Đã Implement
+
+### 1. Import Cookies Login
+- Lấy cookies từ DevTools (Chrome/Edge/Firefox)
+- Cookies cần thiết: c_user, xs, fr
+- Lưu trữ cục bộ trong SQLite
+
+### 2. Image Quality Filter
 - Không lọc (0x0)
 - Thấp (300x300)
 - Trung bình (600x400)
 - Cao (1200x800)
 - Tùy chỉnh thủ công
+
+### 3. Download Options
+- Format: ZIP hoặc CBZ
+- Tên file tùy chỉnh
+- Chọn ảnh để tải
+
+### 4. History & Tracking
+- Lịch sử xem bài viết
+- Lịch sử tải xuống
+- Kiểm tra thư mục tồn tại
+- Mở thư mục trong Explorer
+- Xóa thư mục
 
 ---
 
@@ -97,11 +118,11 @@ facebook_post_scan/
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── auth/
-│   │   │   │   ├── login/route.ts    ✅ Login API
+│   │   │   │   ├── import-cookies/route.ts ✅ Import cookies
 │   │   │   │   ├── logout/route.ts   ✅ Logout API
 │   │   │   │   └── status/route.ts   ✅ Auth status
 │   │   │   ├── posts/
-│   │   │   │   ├── scan/route.ts     ✅ Scan post
+│   │   │   │   ├── scan/route.ts     ✅ Scan post (Playwright)
 │   │   │   │   └── scan-group/route.ts ✅ Scan group
 │   │   │   ├── images/
 │   │   │   │   └── download/route.ts ✅ Download images
@@ -110,25 +131,47 @@ facebook_post_scan/
 │   │   │   ├── history/route.ts      ✅ View history
 │   │   │   └── settings/route.ts    ✅ Settings API
 │   │   ├── downloads/page.tsx        ✅ Downloads page
-│   │   ├── login/page.tsx            ✅ Login page
+│   │   ├── login/page.tsx            ✅ Login page (Cookies only)
 │   │   ├── posts/[id]/page.tsx       ✅ Post detail
 │   │   ├── globals.css                ✅ Global styles
 │   │   ├── layout.tsx                ✅ Root layout
 │   │   └── page.tsx                  ✅ Dashboard
 │   ├── components/ui/
-│   │   ├── button.tsx                ✅ Button
-│   │   ├── card.tsx                  ✅ Card
-│   │   ├── input.tsx                 ✅ Input
-│   │   └── label.tsx                 ✅ Label
+│   │   ├── button.tsx, card.tsx, input.tsx, label.tsx, textarea.tsx
 │   └── lib/
-│       ├── facebook-login.ts         ✅ FB login logic
 │       ├── prisma.ts                 ✅ Prisma client
 │       └── utils.ts                  ✅ Utilities
-├── package.json                      ✅ Dependencies
-├── tsconfig.json                     ✅ TypeScript config
-├── tailwind.config.ts                ✅ Tailwind config
-└── next.config.js                    ✅ Next.js config
+├── package.json                      
+├── tsconfig.json                     
+├── tailwind.config.ts                
+└── next.config.js                   
 ```
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Mô tả |
+|--------|----------|-------|
+| POST | /api/auth/import-cookies | Import cookies đăng nhập |
+| POST | /api/auth/logout | Đăng xuất |
+| GET | /api/auth/status | Kiểm tra đăng nhập |
+| POST | /api/posts/scan | Quét bài viết (Playwright) |
+| POST | /api/posts/scan-group | Quét nhóm/trang |
+| GET/POST | /api/images/download | Tải ảnh |
+| GET | /api/downloads | Lịch sử tải |
+| GET/DELETE | /api/folders | Quản lý thư mục |
+| GET/DELETE | /api/history | Lịch sử xem |
+| GET/PUT | /api/settings | Cài đặt |
+
+---
+
+## Database Tables
+
+- **Session** - Lưu cookies đăng nhập Facebook
+- **ViewHistory** - Lịch sử xem bài viết
+- **DownloadHistory** - Lịch sử tải xuống
+- **Settings** - Cài đặt (downloadPath, format, imageFilter)
 
 ---
 
@@ -154,50 +197,38 @@ npm run lint
 
 ---
 
-## API Endpoints
+## Issues Đã Fix
 
-| Method | Endpoint | Mô tả |
-|--------|----------|-------|
-| POST | /api/auth/login | Đăng nhập Facebook |
-| POST | /api/auth/logout | Đăng xuất |
-| GET | /api/auth/status | Kiểm tra đăng nhập |
-| POST | /api/posts/scan | Quét bài viết |
-| POST | /api/posts/scan-group | Quét nhóm/trang |
-| GET/POST | /api/images/download | Tải ảnh |
-| GET | /api/downloads | Lịch sử tải |
-| GET/DELETE | /api/folders | Quản lý thư mục |
-| GET/DELETE | /api/history | Lịch sử xem |
-| GET/PUT | /api/settings | Cài đặt |
+### 1. Facebook Login Timeout
+- Facebook thay đổi cấu trúc login page
+- **Giải pháp:** Loại bỏ đăng nhập bằng mật khẩu, chỉ dùng Cookies
 
----
+### 2. Image Dialog New Facebook UI
+- Facebook dùng dialog mới với hình thu nhỏ
+- **Giải pháp:** 
+  - Tab navigation để tìm /photo/?fbid= link
+  - Skip các link không phải ảnh
+  - Click để mở dialog
+  - Extract từ SVG elements cho URL HD
 
-## Database Tables
+### 3. Thumbnail vs HD Image
+- URL scontent từ img tag là thumbnail
+- **Giải pháp:** Tìm URL trong SVG `image[href]` cho ảnh HD gốc
 
-- **Session** - Lưu session đăng nhập Facebook
-- **ViewHistory** - Lịch sử xem bài viết
-- **DownloadHistory** - Lịch sử tải xuống
-- **Settings** - Cài đặt ứng dụng
+### 4. ArrowRight Không Nhận Diện Được
+- Ảnh load chậm sau khi nhấn ArrowRight
+- **Giải pháp:** Wait tối đa 15 giây, kiểm tra URL thay đổi
 
 ---
 
-## Cần Hoàn Thiện Thêm
+## Next Steps (Optional)
 
-1. **Playwright browsers** - Cần chạy `npx playwright install`
-2. **Testing** - Viết unit tests
-3. **Error handling** - Xử lý lỗi tốt hơn cho Facebook login
-4. **Pagination** - Phân trang cho lịch sử
-5. **File naming** - Tùy chỉnh quy tắc đặt tên file
-
----
-
-## Next Steps
-
-1. Chạy `npx playwright install` để cài browsers
-2. Chạy `npm run dev` để khởi động ứng dụng
-3. Truy cập http://localhost:3000
-4. Đăng nhập với tài khoản Facebook
-5. Test các chức năng quét và tải ảnh
+1. [ ] Viết unit tests
+2. [ ] Pagination cho lịch sử
+3. [ ] Custom file naming patterns
+4. [ ] Batch download nhiều bài viết
+5. [ ] Proxy rotation để tránh block
 
 ---
 
-*Lưu ý: Facebook thường xuyên thay đổi cấu trúc DOM, có thể cần cập nhật scraper định kỳ.*
+*Lưu ý: Facebook thường xuyên thay đổi cấu trúc DOM, cần cập nhật scraper định kỳ.*
