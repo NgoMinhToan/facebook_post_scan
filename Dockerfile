@@ -57,4 +57,4 @@ COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/clie
 EXPOSE 3000
 
 # Chạy trực tiếp với quyền Root
-CMD ["sh", "-c", "prisma db push --schema ./prisma/schema.prisma && node server.js"]
+CMD ["sh", "-c", "prisma migrate deploy && node server.js"]
