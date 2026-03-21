@@ -189,7 +189,7 @@ export default function PostDetailPage() {
                 Danh sách bài viết ({posts.length})
               </CardTitle>
               <CardDescription>
-                Nhấn "Quét" để mở bài viết trong tab mới
+                Nhấn &quot;Quét&quot; để mở bài viết trong tab mới
               </CardDescription>
             </CardHeader>
             <CardContent>

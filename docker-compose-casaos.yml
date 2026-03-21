@@ -1,0 +1,26 @@
+services:
+  facebook-post-scan:
+    image: ghcr.io/ngominhtoan/facebook_post_scan:latest
+    ports:
+      - 3003:3000
+      - 5553:5555
+    volumes:
+      - type: bind
+        source: /DATA/AppData/facebook_post_scan/downloads
+        target: /app/downloads
+        bind:
+          create_host_path: true
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -q
+        - --spider
+        - http://localhost:3000
+      interval: 30s
+      timeout: 10s
+      retries: 3
+networks: {}
